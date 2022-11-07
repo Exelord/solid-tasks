@@ -40,7 +40,7 @@
     "types": "tsc --emitDeclarationOnly --declaration --outDir ./dist/types"
   },
   "devDependencies": {
-    "@vitest/ui": "^0.24.3",
+    "@vitest/ui": "^0.25.0",
     "c8": "^7.12.0",
     "npm-run-all": "^4.1.5",
     "solid-js": "^1.6.0",
