@@ -1,5 +1,5 @@
 import { createObject } from "solid-proxies";
-import { signalledPromise } from "./utils/promise";
+import { cancellablePromise } from "./utils/promise";
 
 // export type TaskFunction<T, Args extends any[]> = (...args: Args) => Promise<T>;
 
@@ -10,10 +10,6 @@ export enum TaskStatus {
   Rejected = "rejected",
   Canceled = "canceled",
   Dropped = "dropped",
-}
-
-export interface TaskContext {
-  signal: AbortSignal;
 }
 
 export class TaskError extends Error {
@@ -69,12 +65,16 @@ export class Task<T> implements Promise<T> {
     return this.#reactiveState.status;
   }
 
+  get signal(): AbortSignal {
+    return this.#abortController.signal;
+  }
+
   get [Symbol.toStringTag](): string {
     return "Task";
   }
 
   #promise?: Promise<T>;
-  #promiseFn: (context: TaskContext) => Promise<T>;
+  #promiseFn: (task: Task<T>) => Promise<T>;
   #abortController = new AbortController();
 
   #reactiveState = createObject<{
@@ -86,7 +86,7 @@ export class Task<T> implements Promise<T> {
     status: TaskStatus.Idle,
   });
 
-  constructor(promiseFn: (context: TaskContext) => Promise<T>) {
+  constructor(promiseFn: (task: Task<T>) => Promise<T>) {
     this.#promiseFn = promiseFn;
   }
 
@@ -125,13 +125,11 @@ export class Task<T> implements Promise<T> {
     if (this.isIdle) {
       const error = new TaskDroppedError(cancelReason);
       this.#abortController.abort(error);
-      this.#reactiveState.error = error;
-      this.#reactiveState.status = TaskStatus.Dropped;
+      this.#handleFailure(TaskStatus.Dropped, error);
     } else if (this.isPending) {
       const error = new TaskCancelledError(cancelReason);
       this.#abortController.abort(error);
-      this.#reactiveState.error = error;
-      this.#reactiveState.status = TaskStatus.Canceled;
+      this.#handleFailure(TaskStatus.Canceled, error);
     }
 
     // We don't want to throw any error as cancellation has been successful.
@@ -146,29 +144,38 @@ export class Task<T> implements Promise<T> {
     // We need to check if the task has been cancelled before we start the promise.
     this.#abortController.signal.throwIfAborted();
 
-    const promise = this.#promiseFn({
-      signal: this.#abortController.signal,
-    }).catch((error) => {
+    this.#reactiveState.status = TaskStatus.Pending;
+
+    const promise = this.#promiseFn(this).catch((error) => {
       if (this.isPending) {
-        this.#reactiveState.error = error;
-        this.#reactiveState.status = TaskStatus.Rejected;
+        this.#handleFailure(TaskStatus.Rejected, error);
       }
       throw error;
     });
 
-    this.#reactiveState.status = TaskStatus.Pending;
+    const value = await cancellablePromise(
+      this.#abortController.signal,
+      promise
+    );
 
-    const value = await signalledPromise(this.#abortController.signal, promise);
-
-    this.#reactiveState.value = value;
-    this.#reactiveState.status = TaskStatus.Fulfilled;
+    this.#handleSuccess(TaskStatus.Fulfilled, value);
 
     return value;
+  }
+
+  #handleFailure(status: TaskStatus, error: this["error"]): void {
+    this.#reactiveState.status = status;
+    this.#reactiveState.error = error;
+  }
+
+  #handleSuccess(status: TaskStatus, value: this["value"]): void {
+    this.#reactiveState.status = status;
+    this.#reactiveState.value = value;
   }
 }
 
 export function createTask<T>(
-  promiseFn: (context: TaskContext) => Promise<T>
+  promiseFn: (task: Task<T>) => Promise<T>
 ): Task<T> {
   return new Task(promiseFn);
 }

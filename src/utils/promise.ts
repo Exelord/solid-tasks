@@ -18,7 +18,10 @@ export function controlledPromise<T = any>(): ControlledPromise<T> {
   return promise;
 }
 
-export function signalledPromise<T>(signal: AbortSignal, promise: Promise<T>) {
+export function cancellablePromise<T>(
+  signal: AbortSignal,
+  promise: Promise<T>
+) {
   return Promise.race([
     new Promise<never>((_resolve, reject) => {
       signal.addEventListener("abort", () => {
@@ -29,6 +32,6 @@ export function signalledPromise<T>(signal: AbortSignal, promise: Promise<T>) {
   ]);
 }
 
-export function timeoutPromise(ms: number) {
+export function timeoutPromise(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
