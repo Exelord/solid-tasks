@@ -4,7 +4,7 @@ import {
   TaskDroppedError,
   TaskStatus,
 } from "src/task";
-import { createControlledPromise } from "src/utils/promise";
+import { controlledPromise } from "src/utils/promise";
 import { describe, test, expect } from "vitest";
 
 describe("Task", () => {
@@ -53,7 +53,7 @@ describe("Task", () => {
 
   describe("#cancel", async () => {
     test("cancelling pending task", async () => {
-      const promise = createControlledPromise();
+      const promise = controlledPromise();
       const task = createTask(() => promise);
 
       expect(task.status).toBe(TaskStatus.Idle);
@@ -78,7 +78,7 @@ describe("Task", () => {
     });
 
     test("cancelling idle task", async () => {
-      const promise = createControlledPromise();
+      const promise = controlledPromise();
       const task = createTask(() => promise);
 
       expect(task.status).toBe(TaskStatus.Idle);
