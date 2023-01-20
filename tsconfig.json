@@ -21,8 +21,6 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "strictNullChecks": true,
-    "inlineSourceMap": true,
-    "inlineSources": true,
     "forceConsistentCasingInFileNames": true,
     "baseUrl": "./src"
   },
