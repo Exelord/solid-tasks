@@ -98,7 +98,7 @@ export class Task<T> implements Promise<T> {
       | null
       | undefined
   ): Promise<TResult1 | TResult2> {
-    return this.execute().then(onfulfilled, onrejected);
+    return this.#execute().then(onfulfilled, onrejected);
   }
 
   catch<TResult = never>(
@@ -107,16 +107,16 @@ export class Task<T> implements Promise<T> {
       | null
       | undefined
   ): Promise<T | TResult> {
-    return this.execute().catch(onrejected);
+    return this.#execute().catch(onrejected);
   }
 
   finally(onfinally?: (() => void) | null | undefined): Promise<T> {
-    return this.execute().finally(onfinally);
+    return this.#execute().finally(onfinally);
   }
 
-  execute(): Promise<T> {
-    this.#promise ??= this.#resolve();
-    return this.#promise;
+  perform(): Task<T> {
+    this.#execute();
+    return this;
   }
 
   async cancel(cancelReason = "Task has been cancelled."): Promise<void> {
@@ -136,6 +136,11 @@ export class Task<T> implements Promise<T> {
     } catch (error) {
       return;
     }
+  }
+
+  #execute(): Promise<T> {
+    this.#promise ??= this.#resolve();
+    return this.#promise;
   }
 
   async #resolve(): Promise<T> {

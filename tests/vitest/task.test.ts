@@ -7,14 +7,14 @@ import {
 import { describe, test, expect } from "vitest";
 
 describe("Task", () => {
-  describe("#execute", async () => {
+  describe("#perform", async () => {
     test("fulfilled", async () => {
       const task = createTask(() => Promise.resolve("Hello World"));
 
       expect(task.status).toBe(TaskStatus.Idle);
       expect(task.isIdle).toBe(true);
 
-      task.execute();
+      task.perform();
 
       expect(task.status).toBe(TaskStatus.Pending);
       expect(task.isPending).toBe(true);
@@ -34,7 +34,7 @@ describe("Task", () => {
       expect(task.status).toBe(TaskStatus.Idle);
       expect(task.isIdle).toBe(true);
 
-      task.execute();
+      task.perform();
 
       expect(task.status).toBe(TaskStatus.Pending);
       expect(task.isPending).toBe(true);
@@ -54,7 +54,7 @@ describe("Task", () => {
 
       expect(task.status).toBe(TaskStatus.Idle);
 
-      task.execute();
+      task.perform();
 
       expect(task.status).toBe(TaskStatus.Pending);
 
