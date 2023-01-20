@@ -1,1 +1,2 @@
-console.log("Hello");
+export * from "./task";
+export * from "./work";
