@@ -3,8 +3,8 @@ import {
   TaskCancelledError,
   TaskDroppedError,
   TaskStatus,
-} from "src/task";
-import { controlledPromise } from "src/utils/promise";
+} from "../../src/task";
+import { controlledPromise } from "../../src/utils/promise";
 import { describe, test, expect } from "vitest";
 
 describe("Task", () => {
@@ -78,8 +78,7 @@ describe("Task", () => {
     });
 
     test("cancelling idle task", async () => {
-      const promise = controlledPromise();
-      const task = createTask(() => promise);
+      const task = createTask(() => new Promise(() => {}));
 
       expect(task.status).toBe(TaskStatus.Idle);
 

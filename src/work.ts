@@ -1,13 +1,12 @@
-import { Task } from "./task";
 import { cancellablePromise, timeoutPromise } from "./utils/promise";
 
-export async function work<T, R>(
-  task: Task<R>,
+export async function work<T>(
+  signal: AbortSignal,
   promise: Promise<T>
 ): Promise<T> {
-  return cancellablePromise(task.signal, promise);
+  return cancellablePromise(signal, promise);
 }
 
-export async function timeout<T>(task: Task<T>, ms: number): Promise<void> {
-  return work(task, timeoutPromise(ms));
+export async function timeout(signal: AbortSignal, ms: number): Promise<void> {
+  return work(signal, timeoutPromise(ms));
 }

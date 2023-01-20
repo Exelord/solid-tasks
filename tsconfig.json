@@ -24,7 +24,7 @@
     "inlineSourceMap": true,
     "inlineSources": true,
     "forceConsistentCasingInFileNames": true,
-    "baseUrl": "."
+    "baseUrl": "./src"
   },
-  "include": ["./src", "./tests"]
+  "include": ["./src"]
 }
