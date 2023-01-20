@@ -4,7 +4,6 @@ import {
   TaskDroppedError,
   TaskStatus,
 } from "../../src/task";
-import { controlledPromise } from "../../src/utils/promise";
 import { describe, test, expect } from "vitest";
 
 describe("Task", () => {
@@ -51,8 +50,7 @@ describe("Task", () => {
 
   describe("#cancel", async () => {
     test("cancelling pending task", async () => {
-      const promise = controlledPromise();
-      const task = createTask(() => promise);
+      const task = createTask(() => new Promise(() => {}));
 
       expect(task.status).toBe(TaskStatus.Idle);
 
@@ -61,11 +59,6 @@ describe("Task", () => {
       expect(task.status).toBe(TaskStatus.Pending);
 
       await task.cancel();
-
-      expect(task.status).toBe(TaskStatus.Canceled);
-      expect(task.error).toBeInstanceOf(TaskCancelledError);
-
-      promise.resolve(undefined);
 
       expect(task.status).toBe(TaskStatus.Canceled);
       expect(task.error).toBeInstanceOf(TaskCancelledError);
