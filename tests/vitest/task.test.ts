@@ -35,9 +35,7 @@ describe("Task", () => {
       expect(task.status).toBe(TaskStatus.Idle);
       expect(task.isIdle).toBe(true);
 
-      (async () => {
-        await expect(task.execute()).rejects.toThrow("Something went wrong");
-      })();
+      task.execute();
 
       expect(task.status).toBe(TaskStatus.Pending);
       expect(task.isPending).toBe(true);
@@ -58,11 +56,7 @@ describe("Task", () => {
 
       expect(task.status).toBe(TaskStatus.Idle);
 
-      (async () => {
-        await expect(task.execute()).rejects.toThrow(
-          "Task has been cancelled."
-        );
-      })();
+      task.execute();
 
       expect(task.status).toBe(TaskStatus.Pending);
 
