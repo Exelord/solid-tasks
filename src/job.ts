@@ -112,7 +112,6 @@ export class Job<T, Args extends unknown[]> {
         }
       )
       .finally(() => {
-        debugger;
         if (task.isFulfilled || task.isRejected) {
           this.#reactiveState.lastSettled = task;
         }
@@ -133,8 +132,10 @@ export function createJob<T, Args extends unknown[]>(
   options: JobOptions = {}
 ): Job<T, Args> {
   const job = new Job(taskFn, options);
+
   onCleanup(() => {
     job.cancelAll();
   });
+
   return job;
 }

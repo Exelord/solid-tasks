@@ -101,7 +101,7 @@ describe("job", () => {
   });
 
   test("cancels all tasks on cleanup", async () => {
-    createRoot(async (cleanup) => {
+    await createRoot(async (cleanup) => {
       const job = createJob(async (signal) => {
         await work(signal, new Promise(() => {}));
       });
@@ -112,7 +112,7 @@ describe("job", () => {
 
       cleanup();
 
-      await Promise.resolve();
+      await new Promise(process.nextTick);
 
       expect(job.isPending).toBe(false);
     });
