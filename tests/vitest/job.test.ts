@@ -1,6 +1,7 @@
 import { work, timeout } from "../../src/work";
 import { createJob, JobMode } from "../../src/job";
 import { describe, test, expect } from "vitest";
+import { createRoot } from "solid-js";
 
 describe("job", () => {
   describe("#perform", () => {
@@ -97,5 +98,23 @@ describe("job", () => {
     expect(job.lastSettled).toBe(undefined);
     expect(job.lastRejected).toBe(undefined);
     expect(job.lastPending).toBe(undefined);
+  });
+
+  test("cancels all tasks on cleanup", async () => {
+    createRoot(async (cleanup) => {
+      const job = createJob(async (signal) => {
+        await work(signal, new Promise(() => {}));
+      });
+
+      job.perform();
+
+      expect(job.isPending).toBe(true);
+
+      cleanup();
+
+      await Promise.resolve();
+
+      expect(job.isPending).toBe(false);
+    });
   });
 });

@@ -1,3 +1,4 @@
+import { onCleanup } from "solid-js";
 import { createObject } from "solid-proxies";
 import { Task } from "./task";
 
@@ -111,6 +112,7 @@ export class Job<T, Args extends unknown[]> {
         }
       )
       .finally(() => {
+        debugger;
         if (task.isFulfilled || task.isRejected) {
           this.#reactiveState.lastSettled = task;
         }
@@ -130,5 +132,9 @@ export function createJob<T, Args extends unknown[]>(
   taskFn: TaskFunction<T, Args>,
   options: JobOptions = {}
 ): Job<T, Args> {
-  return new Job(taskFn, options);
+  const job = new Job(taskFn, options);
+  onCleanup(() => {
+    job.cancelAll();
+  });
+  return job;
 }
