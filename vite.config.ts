@@ -9,7 +9,7 @@ export default defineConfig({
       formats: ["cjs", "es"],
     },
     rollupOptions: {
-      external: ["solid-proxies"],
+      external: ["solid-proxies", "solid-js"],
     },
   },
   resolve: {
