@@ -2,6 +2,8 @@ export function cancellablePromise<T>(
   signal: AbortSignal,
   promise: Promise<T>
 ) {
+  signal.throwIfAborted();
+
   return Promise.race([
     new Promise<never>((_resolve, reject) => {
       signal.addEventListener("abort", () => {
