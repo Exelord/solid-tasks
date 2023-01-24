@@ -30,7 +30,7 @@ describe("job", () => {
 
       expect(job.isIdle).toBe(true);
       expect(task1.isFulfilled).toBe(true);
-      expect(task2.isDropped).toBe(true);
+      expect(task2.isAborted).toBe(true);
 
       expect(job.lastFulfilled).toBe(task1);
       expect(job.lastSettled).toBe(task1);
@@ -65,7 +65,7 @@ describe("job", () => {
       await job.lastPending;
 
       expect(job.isIdle).toBe(true);
-      expect(task1.isCancelled).toBe(true);
+      expect(task1.isAborted).toBe(true);
       expect(task2.isFulfilled).toBe(true);
 
       expect(job.performCount).toBe(2);
@@ -92,7 +92,7 @@ describe("job", () => {
     await job.cancelAll();
 
     expect(job.isIdle).toBe(true);
-    expect(task.isCancelled).toBe(true);
+    expect(task.isAborted).toBe(true);
 
     expect(job.lastFulfilled).toBe(undefined);
     expect(job.lastSettled).toBe(undefined);

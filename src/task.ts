@@ -6,20 +6,11 @@ export enum TaskStatus {
   Pending = "pending",
   Fulfilled = "fulfilled",
   Rejected = "rejected",
-  Canceled = "canceled",
-  Dropped = "dropped",
+  Aborted = "aborted",
 }
 
-export class TaskError extends Error {
-  name = "TaskError";
-}
-
-export class TaskCancelledError extends TaskError {
-  name = "TaskCancelledError";
-}
-
-export class TaskDroppedError extends TaskError {
-  name = "TaskDroppedError";
+export class TaskAbortError extends Error {
+  name = "TaskAbortError";
 }
 
 export class Task<T> implements Promise<T> {
@@ -47,16 +38,12 @@ export class Task<T> implements Promise<T> {
     return this.status === TaskStatus.Rejected;
   }
 
-  get isCancelled(): boolean {
-    return this.status === TaskStatus.Canceled;
-  }
-
-  get isDropped(): boolean {
-    return this.status === TaskStatus.Dropped;
-  }
-
   get isSettled(): boolean {
     return [TaskStatus.Fulfilled, TaskStatus.Rejected].includes(this.status);
+  }
+
+  get isAborted(): boolean {
+    return this.status === TaskStatus.Aborted;
   }
 
   get status(): TaskStatus {
@@ -122,9 +109,7 @@ export class Task<T> implements Promise<T> {
   async cancel(cancelReason = "Task has been cancelled."): Promise<void> {
     if (!this.isIdle && !this.isPending) return;
 
-    const error = new (this.isIdle ? TaskDroppedError : TaskCancelledError)(
-      cancelReason
-    );
+    const error = new TaskAbortError(cancelReason);
 
     this.#handleFailure(error);
     this.#abortController.abort(error);
@@ -165,10 +150,8 @@ export class Task<T> implements Promise<T> {
   }
 
   #handleFailure(error: this["error"]): void {
-    if (error instanceof TaskCancelledError) {
-      this.#reactiveState.status = TaskStatus.Canceled;
-    } else if (error instanceof TaskDroppedError) {
-      this.#reactiveState.status = TaskStatus.Dropped;
+    if (error instanceof TaskAbortError) {
+      this.#reactiveState.status = TaskStatus.Aborted;
     } else {
       this.#reactiveState.status = TaskStatus.Rejected;
     }

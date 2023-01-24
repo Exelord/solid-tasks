@@ -1,9 +1,4 @@
-import {
-  createTask,
-  TaskCancelledError,
-  TaskDroppedError,
-  TaskStatus,
-} from "../../src/task";
+import { createTask, TaskAbortError, TaskStatus } from "../../src/task";
 import { describe, test, expect } from "vitest";
 
 describe("Task", () => {
@@ -60,8 +55,8 @@ describe("Task", () => {
 
       await task.cancel();
 
-      expect(task.status).toBe(TaskStatus.Canceled);
-      expect(task.error).toBeInstanceOf(TaskCancelledError);
+      expect(task.status).toBe(TaskStatus.Aborted);
+      expect(task.error).toBeInstanceOf(TaskAbortError);
     });
 
     test("cancelling idle task", async () => {
@@ -71,12 +66,12 @@ describe("Task", () => {
 
       await task.cancel();
 
-      expect(task.status).toBe(TaskStatus.Dropped);
+      expect(task.status).toBe(TaskStatus.Aborted);
 
       await expect(task).rejects.toThrow("Task has been cancelled.");
 
-      expect(task.status).toBe(TaskStatus.Dropped);
-      expect(task.error).toBeInstanceOf(TaskDroppedError);
+      expect(task.status).toBe(TaskStatus.Aborted);
+      expect(task.error).toBeInstanceOf(TaskAbortError);
     });
   });
 });
