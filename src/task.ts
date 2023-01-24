@@ -114,11 +114,10 @@ export class Task<T> implements Promise<T> {
     this.#handleFailure(error);
     this.#abortController.abort(error);
 
-    // We don't want to throw any error as cancellation has been successful.
-    // We just want to make sure that the promise has been rejected if pending.
+    // We want to make sure that the promise has been rejected if pending.
     try {
       await this.#promise;
-    } catch (error) {
+    } catch {
       return;
     }
   }
