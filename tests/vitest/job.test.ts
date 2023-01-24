@@ -76,7 +76,7 @@ describe("job", () => {
     });
   });
 
-  test("#cancelAll", async () => {
+  test("#abort", async () => {
     const job = createJob(async (signal) => {
       await work(signal, new Promise(() => {}));
     });
@@ -89,7 +89,7 @@ describe("job", () => {
     expect(job.performCount).toBe(1);
     expect(job.isPending).toBe(true);
 
-    await job.cancelAll();
+    await job.abort();
 
     expect(job.isIdle).toBe(true);
     expect(task.isAborted).toBe(true);
@@ -100,7 +100,7 @@ describe("job", () => {
     expect(job.lastPending).toBe(undefined);
   });
 
-  test("cancels all tasks on cleanup", async () => {
+  test("aborts all tasks on cleanup", async () => {
     await createRoot(async (cleanup) => {
       const job = createJob(async (signal) => {
         await work(signal, new Promise(() => {}));

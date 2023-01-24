@@ -106,7 +106,7 @@ export class Task<T> implements Promise<T> {
     return this;
   }
 
-  async cancel(cancelReason = "Task has been cancelled."): Promise<void> {
+  async abort(cancelReason = "The task was aborted."): Promise<void> {
     if (!this.isIdle && !this.isPending) return;
 
     const error = new TaskAbortError(cancelReason);

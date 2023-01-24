@@ -43,8 +43,8 @@ describe("Task", () => {
     });
   });
 
-  describe("#cancel", async () => {
-    test("cancelling pending task", async () => {
+  describe("#abort", async () => {
+    test("aborting pending task", async () => {
       const task = createTask(() => new Promise(() => {}));
 
       expect(task.status).toBe(TaskStatus.Idle);
@@ -53,22 +53,22 @@ describe("Task", () => {
 
       expect(task.status).toBe(TaskStatus.Pending);
 
-      await task.cancel();
+      await task.abort();
 
       expect(task.status).toBe(TaskStatus.Aborted);
       expect(task.error).toBeInstanceOf(TaskAbortError);
     });
 
-    test("cancelling idle task", async () => {
+    test("aborting idle task", async () => {
       const task = createTask(() => new Promise(() => {}));
 
       expect(task.status).toBe(TaskStatus.Idle);
 
-      await task.cancel();
+      await task.abort();
 
       expect(task.status).toBe(TaskStatus.Aborted);
 
-      await expect(task).rejects.toThrow("Task has been cancelled.");
+      await expect(task).rejects.toThrow("The task was aborted.");
 
       expect(task.status).toBe(TaskStatus.Aborted);
       expect(task.error).toBeInstanceOf(TaskAbortError);

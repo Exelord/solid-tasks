@@ -83,12 +83,12 @@ export class Job<T, Args extends unknown[]> {
 
     if (this.lastPending) {
       if (this.#options.mode === JobMode.Drop) {
-        task.cancel();
+        task.abort();
         return task;
       }
 
       if (this.#options.mode === JobMode.Restart) {
-        this.lastPending.cancel();
+        this.lastPending.abort();
       }
     }
 
@@ -96,8 +96,8 @@ export class Job<T, Args extends unknown[]> {
     return task;
   }
 
-  async cancelAll(reason?: string): Promise<void> {
-    await this.lastPending?.cancel(reason);
+  async abort(reason?: string): Promise<void> {
+    return this.lastPending?.abort(reason);
   }
 
   #performTask(task: Task<T>): void {
@@ -134,7 +134,7 @@ export function createJob<T, Args extends unknown[]>(
   const job = new Job(taskFn, options);
 
   onCleanup(() => {
-    job.cancelAll();
+    job.abort();
   });
 
   return job;
