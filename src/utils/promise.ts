@@ -1,4 +1,4 @@
-export function cancellablePromise<T>(
+export async function cancellablePromise<T>(
   signal: AbortSignal,
   promise: Promise<T>
 ) {
@@ -6,9 +6,13 @@ export function cancellablePromise<T>(
 
   return Promise.race([
     new Promise<never>((_resolve, reject) => {
-      signal.addEventListener("abort", () => {
-        reject(signal.reason);
-      });
+      signal.addEventListener(
+        "abort",
+        () => {
+          reject(signal.reason);
+        },
+        { once: true, passive: true }
+      );
     }),
     promise,
   ]);
