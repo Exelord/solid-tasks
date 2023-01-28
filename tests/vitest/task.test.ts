@@ -1,5 +1,5 @@
 import { createTask, TaskAbortError, TaskStatus } from "../../src/task";
-import { describe, test, expect } from "vitest";
+import { describe, test, expect, vi } from "vitest";
 
 describe("Task", () => {
   describe("#perform", async () => {
@@ -72,6 +72,93 @@ describe("Task", () => {
 
       expect(task.status).toBe(TaskStatus.Aborted);
       expect(task.error).toBeInstanceOf(TaskAbortError);
+    });
+  });
+
+  describe("#addEventListener", async () => {
+    test("abort", async () => {
+      const task = createTask(() => new Promise(() => {}));
+      const listener = vi.fn();
+
+      task.addEventListener("abort", listener);
+
+      task.perform();
+
+      await task.abort();
+
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+
+    test("fulfill", async () => {
+      const task = createTask(() => Promise.resolve("Hello World"));
+      const listener = vi.fn();
+
+      task.addEventListener("fulfill", listener);
+
+      task.perform();
+
+      await task;
+
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+
+    test("reject", async () => {
+      const error = new Error("Something went wrong");
+      const task = createTask(() => Promise.reject(error));
+      const listener = vi.fn();
+
+      task.addEventListener("reject", listener);
+
+      task.perform();
+
+      await expect(task).rejects.toThrow("Something went wrong");
+
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("#removeEventListener", async () => {
+    test("abort", async () => {
+      const task = createTask(() => new Promise(() => {}));
+      const listener = vi.fn();
+
+      task.addEventListener("abort", listener);
+      task.removeEventListener("abort", listener);
+
+      task.perform();
+
+      await task.abort();
+
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    test("fulfill", async () => {
+      const task = createTask(() => Promise.resolve("Hello World"));
+      const listener = vi.fn();
+
+      task.addEventListener("fulfill", listener);
+      task.removeEventListener("fulfill", listener);
+
+      task.perform();
+
+      await task;
+
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    test("reject", async () => {
+      const error = new Error("Something went wrong");
+      const task = createTask(() => Promise.reject(error));
+      const listener = vi.fn();
+
+      task.addEventListener("reject", listener);
+      task.removeEventListener("reject", listener);
+
+      task.perform();
+
+      await expect(task).rejects.toThrow("Something went wrong");
+
+      expect(listener).not.toHaveBeenCalled();
     });
   });
 });

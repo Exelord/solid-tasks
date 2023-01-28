@@ -28,6 +28,7 @@ interface ReactiveState<T> {
   lastFulfilled?: Task<T>;
   lastRejected?: Task<T>;
   lastSettled?: Task<T>;
+  lastAborted?: Task<T>;
 }
 
 export class Job<T, Args extends unknown[]> {
@@ -59,6 +60,10 @@ export class Job<T, Args extends unknown[]> {
     return this.#reactiveState.lastSettled;
   }
 
+  get lastAborted(): ReactiveState<T>["lastAborted"] {
+    return this.#reactiveState.lastAborted;
+  }
+
   get performCount(): ReactiveState<T>["performCount"] {
     return this.#reactiveState.performCount;
   }
@@ -79,6 +84,8 @@ export class Job<T, Args extends unknown[]> {
 
   perform(...args: Args): Task<T> {
     const task = new Task<T>((signal) => this.#taskFn(signal, ...args));
+
+    this.#instrumentTask(task);
     this.#reactiveState.performCount++;
 
     if (this.lastPending) {
@@ -92,7 +99,11 @@ export class Job<T, Args extends unknown[]> {
       }
     }
 
-    this.#performTask(task);
+    task.perform();
+
+    this.#reactiveState.lastPending = task;
+    this.#reactiveState.status = JobStatus.Pending;
+
     return task;
   }
 
@@ -100,30 +111,35 @@ export class Job<T, Args extends unknown[]> {
     return this.lastPending?.abort(reason);
   }
 
-  #performTask(task: Task<T>): void {
-    task
-      .perform()
-      .then(
-        () => {
-          this.#reactiveState.lastFulfilled = task;
-        },
-        () => {
-          if (task.isRejected) this.#reactiveState.lastRejected = task;
-        }
-      )
-      .finally(() => {
-        if (task.isFulfilled || task.isRejected) {
-          this.#reactiveState.lastSettled = task;
-        }
+  #instrumentTask(task: Task<T>): void {
+    task.addEventListener("reject", () => {
+      this.#reactiveState.lastRejected = task;
+      this.#reactiveState.lastSettled = task;
 
-        if (this.#reactiveState.lastPending === task) {
-          this.#reactiveState.lastPending = undefined;
-          this.#reactiveState.status = JobStatus.Idle;
-        }
-      });
+      if (this.#reactiveState.lastPending === task) {
+        this.#reactiveState.lastPending = undefined;
+        this.#reactiveState.status = JobStatus.Idle;
+      }
+    });
 
-    this.#reactiveState.lastPending = task;
-    this.#reactiveState.status = JobStatus.Pending;
+    task.addEventListener("fulfill", () => {
+      this.#reactiveState.lastFulfilled = task;
+      this.#reactiveState.lastSettled = task;
+
+      if (this.#reactiveState.lastPending === task) {
+        this.#reactiveState.lastPending = undefined;
+        this.#reactiveState.status = JobStatus.Idle;
+      }
+    });
+
+    task.addEventListener("abort", () => {
+      this.#reactiveState.lastAborted = task;
+
+      if (this.#reactiveState.lastPending === task) {
+        this.#reactiveState.lastPending = undefined;
+        this.#reactiveState.status = JobStatus.Idle;
+      }
+    });
   }
 }
 

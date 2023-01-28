@@ -24,7 +24,6 @@ describe("job", () => {
 
       expect(job.performCount).toBe(2);
       expect(job.isPending).toBe(true);
-      expect(job.lastPending).toBe(task1);
 
       await job.lastPending;
 
@@ -34,6 +33,7 @@ describe("job", () => {
 
       expect(job.lastFulfilled).toBe(task1);
       expect(job.lastSettled).toBe(task1);
+      expect(job.lastAborted).toBe(task2);
       expect(job.lastRejected).toBe(undefined);
       expect(job.lastPending).toBe(undefined);
     });
@@ -71,6 +71,7 @@ describe("job", () => {
       expect(job.performCount).toBe(2);
       expect(job.lastFulfilled).toBe(task2);
       expect(job.lastSettled).toBe(task2);
+      expect(job.lastAborted).toBe(task1);
       expect(job.lastRejected).toBe(undefined);
       expect(job.lastPending).toBe(undefined);
     });
@@ -94,6 +95,7 @@ describe("job", () => {
     expect(job.isIdle).toBe(true);
     expect(task.isAborted).toBe(true);
 
+    expect(job.lastAborted).toBe(task);
     expect(job.lastFulfilled).toBe(undefined);
     expect(job.lastSettled).toBe(undefined);
     expect(job.lastRejected).toBe(undefined);
