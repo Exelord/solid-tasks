@@ -67,18 +67,18 @@
     "solid-js": "^1.0.0"
   },
   "dependencies": {
-    "solid-proxies": "^1.0.0"
+    "solid-proxies": "^1.0.1"
   },
   "devDependencies": {
-    "@playwright/experimental-ct-solid": "^1.29.2",
+    "@playwright/experimental-ct-solid": "^1.30.0",
     "@types/node": "^18.11.18",
-    "@vitest/coverage-c8": "^0.27.2",
-    "@vitest/ui": "^0.27.2",
+    "@vitest/coverage-c8": "^0.28.3",
+    "@vitest/ui": "^0.28.3",
     "npm-run-all": "^4.1.5",
     "release-it": "^15.6.0",
     "solid-js": "^1.6.9",
     "typescript": "^4.9.4",
     "vite": "^4.0.4",
-    "vitest": "^0.27.2"
+    "vitest": "^0.28.3"
   }
 }
