@@ -17,6 +17,10 @@ npm install solid-tasks
 
 - Solid.js v1.0.0 or higher
 
+## Demo
+
+- [Codesandbox](https://codesandbox.io/p/sandbox/solid-tasks-rupp9f)
+
 ## How to use it?
 
 ## Drop mode
