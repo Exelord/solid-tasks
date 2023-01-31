@@ -1,5 +1,5 @@
 import { createObject } from "solid-proxies";
-import { cancellablePromise } from "./utils/promise";
+import { work } from "./work";
 
 export enum TaskStatus {
   Idle = "idle",
@@ -161,7 +161,7 @@ export class Task<T> implements Promise<T> {
       this.#abortController.signal.throwIfAborted();
       this.#reactiveState.status = TaskStatus.Pending;
 
-      const value = await cancellablePromise(
+      const value = await work(
         this.#abortController.signal,
         this.#promiseFn(this.#abortController.signal)
       );

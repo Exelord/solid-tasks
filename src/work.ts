@@ -1,12 +1,20 @@
-import { cancellablePromise, timeoutPromise } from "./utils/promise";
+export async function work<T>(signal: AbortSignal, promise: Promise<T>) {
+  signal.throwIfAborted();
 
-export async function work<T>(
-  signal: AbortSignal,
-  promise: Promise<T>
-): Promise<T> {
-  return cancellablePromise(signal, promise);
+  return Promise.race([
+    new Promise<never>((_resolve, reject) => {
+      signal.addEventListener(
+        "abort",
+        () => {
+          reject(signal.reason);
+        },
+        { once: true, passive: true }
+      );
+    }),
+    promise,
+  ]);
 }
 
 export async function timeout(signal: AbortSignal, ms: number): Promise<void> {
-  return work(signal, timeoutPromise(ms));
+  return work(signal, new Promise((resolve) => setTimeout(resolve, ms)));
 }

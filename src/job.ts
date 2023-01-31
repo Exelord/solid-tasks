@@ -83,7 +83,7 @@ export class Job<T, Args extends unknown[]> {
   }
 
   perform(...args: Args): Task<T> {
-    const task = new Task<T>((signal) => this.#taskFn(signal, ...args));
+    const task = new Task((signal) => this.#taskFn(signal, ...args));
 
     this.#instrumentTask(task);
     this.#reactiveState.performCount++;
