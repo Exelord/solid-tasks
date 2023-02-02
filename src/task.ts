@@ -1,4 +1,5 @@
 import { createObject } from "solid-proxies";
+import { isolate } from "utils";
 import { work } from "./work";
 
 export enum TaskStatus {
@@ -197,5 +198,5 @@ export class Task<T> implements Promise<T> {
 export function createTask<T>(
   promiseFn: (signal: AbortSignal) => Promise<T>
 ): Task<T> {
-  return new Task(promiseFn);
+  return new Task((signal) => isolate(() => promiseFn(signal)));
 }

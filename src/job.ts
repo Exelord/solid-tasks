@@ -1,6 +1,6 @@
-import { onCleanup } from "solid-js";
+import { getOwner, onCleanup } from "solid-js";
 import { createObject } from "solid-proxies";
-import { Task } from "./task";
+import { createTask, Task } from "./task";
 
 export type TaskFunction<T, Args extends unknown[]> = (
   signal: AbortSignal,
@@ -83,7 +83,7 @@ export class Job<T, Args extends unknown[]> {
   }
 
   perform(...args: Args): Task<T> {
-    const task = new Task((signal) => this.#taskFn(signal, ...args));
+    const task = createTask((signal) => this.#taskFn(signal, ...args));
 
     this.#instrumentTask(task);
     this.#reactiveState.performCount++;
@@ -149,9 +149,11 @@ export function createJob<T, Args extends unknown[]>(
 ): Job<T, Args> {
   const job = new Job(taskFn, options);
 
-  onCleanup(() => {
-    job.abort();
-  });
+  if (getOwner()) {
+    onCleanup(() => {
+      job.abort();
+    });
+  }
 
   return job;
 }
