@@ -1,5 +1,5 @@
 import { createObject } from "solid-proxies";
-import { isolate } from "utils";
+import { isolate } from "./utils";
 import { work } from "./work";
 
 export enum TaskStatus {
