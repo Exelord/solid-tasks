@@ -1,3 +1,4 @@
+import { untrack } from "solid-js";
 import { createObject } from "solid-proxies";
 import { isolate } from "./utils";
 import { work } from "./work";
@@ -132,19 +133,21 @@ export class Task<T> implements Promise<T> {
     this.#eventTarget.dispatchEvent(new Event(type));
   }
 
-  async abort(cancelReason = "The task was aborted."): Promise<void> {
-    if (!this.isIdle && !this.isPending) return;
+  abort(cancelReason = "The task was aborted."): Promise<void> {
+    return untrack(async () => {
+      if (!this.isIdle && !this.isPending) return;
 
-    const error = new TaskAbortError(cancelReason);
-    this.#abortController.abort(error);
-    if (this.isIdle) this.#handleFailure(error);
+      const error = new TaskAbortError(cancelReason);
+      this.#abortController.abort(error);
+      if (this.isIdle) this.#handleFailure(error);
 
-    try {
-      await this.#promise;
-    } catch (error) {
-      if (error instanceof TaskAbortError) return;
-      throw error;
-    }
+      try {
+        await this.#promise;
+      } catch (error) {
+        if (error instanceof TaskAbortError) return;
+        throw error;
+      }
+    });
   }
 
   perform(): Task<T> {
@@ -153,7 +156,7 @@ export class Task<T> implements Promise<T> {
   }
 
   #execute(): Promise<T> {
-    this.#promise ??= this.#resolve();
+    this.#promise ??= untrack(() => this.#resolve());
     return this.#promise;
   }
 
