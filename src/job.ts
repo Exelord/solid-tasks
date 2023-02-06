@@ -1,4 +1,4 @@
-import { getOwner, onCleanup } from "solid-js";
+import { getOwner, onCleanup, untrack } from "solid-js";
 import { createObject } from "solid-proxies";
 import { createTask, Task } from "./task";
 
@@ -83,32 +83,32 @@ export class Job<T, Args extends unknown[]> {
   }
 
   perform(...args: Args): Task<T> {
-    const task = createTask((signal) => this.#taskFn(signal, ...args));
+    return untrack(() => {
+      const task = createTask((signal) => this.#taskFn(signal, ...args));
+      this.#instrumentTask(task);
+      this.#reactiveState.performCount++;
 
-    this.#instrumentTask(task);
-    this.#reactiveState.performCount++;
+      if (this.lastPending) {
+        if (this.#options.mode === JobMode.Drop) {
+          task.abort();
+          return task;
+        }
 
-    if (this.lastPending) {
-      if (this.#options.mode === JobMode.Drop) {
-        task.abort();
-        return task;
+        if (this.#options.mode === JobMode.Restart) {
+          this.lastPending.abort();
+        }
       }
 
-      if (this.#options.mode === JobMode.Restart) {
-        this.lastPending.abort();
-      }
-    }
+      task.perform();
 
-    task.perform();
-
-    this.#reactiveState.lastPending = task;
-    this.#reactiveState.status = JobStatus.Pending;
-
-    return task;
+      this.#reactiveState.lastPending = task;
+      this.#reactiveState.status = JobStatus.Pending;
+      return task;
+    });
   }
 
   async abort(reason?: string): Promise<void> {
-    return this.lastPending?.abort(reason);
+    return untrack(() => this.lastPending?.abort(reason));
   }
 
   #instrumentTask(task: Task<T>): void {
