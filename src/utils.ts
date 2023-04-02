@@ -1,25 +1,22 @@
-import { createRoot, runWithOwner } from "solid-js";
+import { runWithOwner } from "solid-js";
 
 export function isolate<T>(fn: () => T): T {
-  let error;
-  let hasErrored = false;
-  const owner = null as any;
+  let error: unknown;
+  let hasError = false;
 
-  const result = runWithOwner(owner, () => {
-    return createRoot((dispose) => {
-      try {
-        return fn();
-      } catch (e) {
-        hasErrored = true;
-        error = e;
-        return;
-      } finally {
-        dispose();
-      }
-    });
+  const result = runWithOwner(null, () => {
+    try {
+      return fn();
+    } catch (e) {
+      hasError = true;
+      error = e;
+      throw e;
+    }
   })!;
 
-  if (hasErrored) throw error;
+  if (hasError) {
+    throw error;
+  }
 
   return result;
 }

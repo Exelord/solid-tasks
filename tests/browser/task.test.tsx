@@ -1,10 +1,7 @@
 import { test, expect } from "@playwright/experimental-ct-solid";
 import { TodoList } from "../fixtures/todo-list";
 
-test.only("adds only one todo even when clicked twice", async ({
-  mount,
-  page,
-}) => {
+test("adds only one todo even when clicked twice", async ({ mount, page }) => {
   await mount(<TodoList />);
 
   const addTodo = page.getByRole("button", { name: "Add todo" });

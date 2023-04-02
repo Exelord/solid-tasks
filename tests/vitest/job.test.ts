@@ -1,7 +1,7 @@
 import { work, timeout } from "../../src/work";
 import { createJob, JobMode } from "../../src/job";
 import { describe, test, expect } from "vitest";
-import { createRoot } from "solid-js";
+import { createRoot, getOwner } from "solid-js";
 
 describe("job", () => {
   describe("#perform", () => {
@@ -117,6 +117,17 @@ describe("job", () => {
       await new Promise(process.nextTick);
 
       expect(job.isPending).toBe(false);
+    });
+  });
+
+  test("runs without owner", async () => {
+    await createRoot(async () => {
+      const job = createJob(async () => {
+        expect(getOwner()).toBe(null);
+      });
+
+      expect(getOwner()).not.toBe(null);
+      await job.perform();
     });
   });
 });
