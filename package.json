@@ -29,6 +29,7 @@
   "type": "module",
   "exports": {
     ".": {
+      "types": "./dist/types/index.d.ts",
       "import": "./dist/solid-tasks.js",
       "require": "./dist/solid-tasks.cjs"
     }
