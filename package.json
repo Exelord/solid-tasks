@@ -1,7 +1,7 @@
 {
   "name": "solid-tasks",
   "description": "Manage and control concurrent and async operations in Solid.js apps. Forget about manual cancellation, concurrency side-effects and make your app user proof.",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "license": "MIT",
   "homepage": "https://github.com/Exelord/solid-tasks",
   "repository": "github:exelord/solid-tasks",
