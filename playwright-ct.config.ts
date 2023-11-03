@@ -1,10 +1,9 @@
-import type { PlaywrightTestConfig } from "@playwright/experimental-ct-solid";
-import { devices } from "@playwright/experimental-ct-solid";
+import { defineConfig, devices } from "@playwright/experimental-ct-solid";
 
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
-const config: PlaywrightTestConfig = {
+export default defineConfig({
   testDir: "./tests/browser",
   /* The base directory, relative to the config file, for snapshot files created with toMatchSnapshot and toHaveScreenshot. */
   snapshotDir: "./__snapshots__",
@@ -33,11 +32,7 @@ const config: PlaywrightTestConfig = {
   projects: [
     {
       name: "chromium",
-      use: {
-        ...devices["Desktop Chrome"],
-      },
+      use: { ...devices["Desktop Chrome"] },
     },
   ],
-};
-
-export default config;
+});
