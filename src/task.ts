@@ -10,47 +10,83 @@ export enum TaskStatus {
   Aborted = "aborted",
 }
 
+/**
+ * An error that is thrown when a task is aborted.
+ */
 export class TaskAbortError extends Error {
   name = "TaskAbortError";
 }
 
+/**
+ * A task is a promise that can be aborted, aware of its state.
+ */
 export class Task<T> implements Promise<T> {
+  /**
+   * The current value of the task.
+   */
   get value(): T | null | undefined {
     return this.#reactiveState.value;
   }
 
+  /** 
+   * The current error of the task.
+   */
   get error(): unknown {
     return this.#reactiveState.error;
   }
 
+  /** 
+   * Whether the task is currently idle.
+   */
   get isIdle(): boolean {
     return this.status === TaskStatus.Idle;
   }
 
+  /** 
+   * Whether the task is currently pending.
+   */
   get isPending(): boolean {
     return this.status === TaskStatus.Pending;
   }
 
+  /** 
+   * Whether the task is currently fulfilled.
+   */
   get isFulfilled(): boolean {
     return this.status === TaskStatus.Fulfilled;
   }
 
+  /** 
+   * Whether the task is currently rejected.
+   */
   get isRejected(): boolean {
     return this.status === TaskStatus.Rejected;
   }
 
+  /** 
+   * Whether the task is currently settled.
+   */
   get isSettled(): boolean {
     return [TaskStatus.Fulfilled, TaskStatus.Rejected].includes(this.status);
   }
 
+  /** 
+   * Whether the task is currently aborted.
+   */
   get isAborted(): boolean {
     return this.status === TaskStatus.Aborted;
   }
 
+  /** 
+   * The current status of the task.
+   */
   get status(): TaskStatus {
     return this.#reactiveState.status;
   }
 
+  /** 
+   * The signal of the task. Used to abort the task.
+   */
   get signal(): AbortSignal {
     return this.#abortController.signal;
   }
@@ -132,6 +168,9 @@ export class Task<T> implements Promise<T> {
     this.#eventTarget.dispatchEvent(new Event(type));
   }
 
+  /**
+   * Aborts the task.
+   */
   abort(cancelReason = "The task was aborted."): Promise<void> {
     return untrack(async () => {
       if (!this.isIdle && !this.isPending) return;
@@ -149,6 +188,9 @@ export class Task<T> implements Promise<T> {
     });
   }
 
+  /**
+   * Performs the task.
+   */
   perform(): Task<T> {
     this.#execute();
     return this;
