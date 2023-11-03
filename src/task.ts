@@ -1,6 +1,5 @@
-import { untrack } from "solid-js";
+import { runWithOwner, untrack } from "solid-js";
 import { createObject } from "solid-proxies";
-import { isolate } from "./utils";
 import { work } from "./work";
 
 export enum TaskStatus {
@@ -75,7 +74,7 @@ export class Task<T> implements Promise<T> {
   });
 
   constructor(promiseFn: (signal: AbortSignal) => Promise<T>) {
-    this.#promiseFn = promiseFn;
+    this.#promiseFn = (signal) => runWithOwner(null, () => promiseFn(signal))!;
   }
 
   then<TResult1 = T, TResult2 = never>(
@@ -201,5 +200,5 @@ export class Task<T> implements Promise<T> {
 export function createTask<T>(
   promiseFn: (signal: AbortSignal) => Promise<T>
 ): Task<T> {
-  return new Task((signal) => isolate(() => promiseFn(signal)));
+  return new Task(promiseFn);
 }
