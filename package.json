@@ -68,7 +68,7 @@
     "solid-js": "^1.7.0"
   },
   "dependencies": {
-    "solid-proxies": "^1.0.2"
+    "solid-proxies": "^2.0.2"
   },
   "devDependencies": {
     "@playwright/experimental-ct-solid": "^1.39.0",
