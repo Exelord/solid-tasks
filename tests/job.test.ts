@@ -1,6 +1,6 @@
-import { work, timeout } from "../../src/work";
-import { createJob, JobMode } from "../../src/job";
-import { describe, test, expect } from "vitest";
+import { work, timeout } from "../src/work.ts";
+import { createJob, JobMode } from "../src/job.ts";
+import { describe, test, expect } from "vite-plus/test";
 import { createRoot, getOwner } from "solid-js";
 
 describe("job", () => {
@@ -44,7 +44,7 @@ describe("job", () => {
           await timeout(signal, 1);
           return "Hello World";
         },
-        { mode: JobMode.Restart }
+        { mode: JobMode.Restart },
       );
 
       expect(job.performCount).toBe(0);
@@ -114,9 +114,33 @@ describe("job", () => {
 
       cleanup();
 
-      await new Promise(process.nextTick);
+      await new Promise((resolve) => process.nextTick(resolve));
 
       expect(job.isPending).toBe(false);
+    });
+  });
+
+  test("aborts nested tasks on signal", async () => {
+    await createRoot(async () => {
+      const job1 = createJob(async (signal) => {
+        await work(signal, Promise.resolve());
+        return "job1 done";
+      });
+
+      const job2 = createJob(async (signal) => {
+        await work(signal, job1.perform().abortOnSignal(signal));
+      });
+
+      job2.perform();
+
+      expect(job1.isPending).toBe(true);
+      expect(job2.isPending).toBe(true);
+
+      await job2.abort();
+
+      expect(job2.isPending).toBe(false);
+      expect(job1.isPending).toBe(false);
+      expect(job1.lastFulfilled?.value).toBeUndefined();
     });
   });
 
