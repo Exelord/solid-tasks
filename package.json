@@ -1,6 +1,6 @@
 {
   "name": "solid-tasks",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Manage and control concurrent and async operations in Solid.js apps. Forget about manual cancellation, concurrency side-effects and make your app user proof.",
   "keywords": [
     "actions",
