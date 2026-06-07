@@ -1,6 +1,6 @@
 import { getOwner, onCleanup, untrack } from "solid-js";
 import { createObject } from "solid-proxies";
-import { createTask, Task } from "./task";
+import { createTask, Task } from "./task.ts";
 
 export type TaskFunction<T, Args extends unknown[]> = (
   signal: AbortSignal,
@@ -151,12 +151,12 @@ export class Job<T, Args extends unknown[]> {
 
       if (this.lastPending) {
         if (this.#options.mode === JobMode.Drop) {
-          task.abort();
+          void task.abort();
           return task;
         }
 
         if (this.#options.mode === JobMode.Restart) {
-          this.lastPending.abort();
+          void this.lastPending.abort();
         }
       }
 
@@ -178,33 +178,28 @@ export class Job<T, Args extends unknown[]> {
   }
 
   #instrumentTask(task: Task<T>): void {
-    task.addEventListener("reject", () => {
-      this.#reactiveState.lastRejected = task;
-      this.#reactiveState.lastSettled = task;
-
+    const clearIfPending = () => {
       if (this.#reactiveState.lastPending === task) {
         this.#reactiveState.lastPending = undefined;
         this.#reactiveState.status = JobStatus.Idle;
       }
-    });
+    };
 
     task.addEventListener("fulfill", () => {
       this.#reactiveState.lastFulfilled = task;
       this.#reactiveState.lastSettled = task;
+      clearIfPending();
+    });
 
-      if (this.#reactiveState.lastPending === task) {
-        this.#reactiveState.lastPending = undefined;
-        this.#reactiveState.status = JobStatus.Idle;
-      }
+    task.addEventListener("reject", () => {
+      this.#reactiveState.lastRejected = task;
+      this.#reactiveState.lastSettled = task;
+      clearIfPending();
     });
 
     task.addEventListener("abort", () => {
       this.#reactiveState.lastAborted = task;
-
-      if (this.#reactiveState.lastPending === task) {
-        this.#reactiveState.lastPending = undefined;
-        this.#reactiveState.status = JobStatus.Idle;
-      }
+      clearIfPending();
     });
   }
 }
@@ -219,13 +214,13 @@ export class Job<T, Args extends unknown[]> {
  */
 export function createJob<T, Args extends unknown[]>(
   taskFn: TaskFunction<T, Args>,
-  options: JobOptions = {}
+  options: JobOptions = {},
 ): Job<T, Args> {
   const job = new Job(taskFn, options);
 
   if (getOwner()) {
     onCleanup(() => {
-      job.abort();
+      void job.abort();
     });
   }
 

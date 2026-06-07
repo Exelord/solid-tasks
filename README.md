@@ -12,6 +12,7 @@ This library is especially useful in real user interfaces where the same action 
 
 ## Table of contents
 
+- [Why you need this](#why-you-need-this)
 - [Scope and abstraction level](#scope-and-abstraction-level)
 - [Why this library exists](#why-this-library-exists)
 - [What problem it solves](#what-problem-it-solves)
@@ -35,17 +36,79 @@ This library is especially useful in real user interfaces where the same action 
 
 ---
 
+## Why you need this
+
+Most async bugs in a UI trace back to one mistake: treating a user action as _"call this async function"_ when it is really **an operation with a concurrency policy**.
+
+Take a single **Save** button. The moment it touches the network, you implicitly owe answers to:
+
+- What if it's clicked twice before the first request finishes?
+- What if the user navigates away mid-request?
+- What if a newer action starts before the older one resolves?
+- What if a stale response arrives _after_ newer state already exists?
+
+These are not edge cases — they are the normal behavior of interactive software. Every meaningful click, keystroke, or navigation is one of these operations. With raw promises you answer the questions by hand, over and over, with scattered signals, booleans, abort controllers, and guards:
+
+```tsx
+// The hidden cost of "just an async handler"
+const [isSaving, setIsSaving] = createSignal(false);
+const [error, setError] = createSignal<Error | null>(null);
+
+const save = async () => {
+  setIsSaving(true);
+  setError(null);
+  try {
+    await fetch("/api/save", { method: "POST" }); // not cancellable
+  } catch (err) {
+    setError(err as Error); // a cancelled request looks like a failure
+  } finally {
+    setIsSaving(false); // nothing stops a second click from overlapping
+  }
+};
+```
+
+A **Job** turns that same action into one explicit, abortable, stateful object — and the concurrency policy becomes part of the definition, not an afterthought:
+
+```tsx
+const saveJob = createJob(
+  async (signal) => {
+    await fetch("/api/save", { method: "POST", signal }); // cancellable
+  },
+  { mode: JobMode.Drop }, // duplicate clicks are refused, structurally
+);
+
+// pending / error / success all derive from a single source of truth
+<button disabled={saveJob.isPending} onClick={() => saveJob.perform()}>
+  {saveJob.isPending ? "Saving…" : "Save"}
+</button>;
+```
+
+That is the entire pitch: **model every meaningful async user action or event as a `Task` or `Job`, and concurrency stops being accidental.** Loading flags, cancellation, race protection, and "remember the last good value" all come for free, in one place, every time.
+
+### Which one do I reach for?
+
+| You have…                                                                                                | Use                                        | Because                                                 |
+| -------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------- |
+| A repeatable action where the **first** call should win — Save, Pay, Delete, Submit, Upload              | `createJob(fn, { mode: JobMode.Drop })`    | duplicate triggers are refused while one is in flight   |
+| A repeatable action where the **latest** call should win — search, autocomplete, filter, route/tab loads | `createJob(fn, { mode: JobMode.Restart })` | the previous run is aborted so stale results can't land |
+| A **single** abortable run, or a building block inside other logic                                       | `createTask(fn)`                           | one execution with lifecycle + cancellation, no policy  |
+
+New here? Read [Core mental model](#core-mental-model) for the `Task` vs `Job` split, then [Why UI events should be Jobs](#why-ui-events-should-be-jobs) for the full argument.
+
+---
+
 ## Scope and abstraction level
 
-**It is crucial to understand that Solid Tasks is a low-level primitive, not a high-level framework.** 
+**It is crucial to understand that Solid Tasks is a low-level primitive, not a high-level framework.**
 
-This library is designed to deal strictly with the **state machine and UI flow of Promises** (loading flags, cancellation, fulfillment, rejection) and localized concurrency (dropping or restarting overlapping requests). 
+This library is designed to deal strictly with the **state machine and UI flow of Promises** (loading flags, cancellation, fulfillment, rejection) and localized concurrency (dropping or restarting overlapping requests).
 
-While it *can* be used directly in your application code, **it is not a replacement for high-level data fetching libraries like TanStack Query or Solid's native `createResource`.** 
+While it _can_ be used directly in your application code, **it is not a replacement for high-level data fetching libraries like TanStack Query or Solid's native `createResource`.**
 
 If you attempt to use Solid Tasks as your primary global data-fetching and caching layer, you will find that it is not optimized for that Developer Experience (DX) and will require significant boilerplate. It does not handle global cache invalidation, background refetching, or pagination out of the box.
 
 Instead, Solid Tasks is the kind of primitive you use to **build** more complex solutions. It shines when used as:
+
 - The underlying engine for advanced, bespoke event-handling pipelines.
 - A building block for custom data-loading wrappers.
 - A tool to manage complex, multi-step UI mutations (like chained save/upload operations) where you need fine-grained control over cancellation and race conditions.
@@ -227,7 +290,7 @@ import {
 A `Task<T>` wraps one async function of the form:
 
 ```ts
-(signal: AbortSignal) => Promise<T>
+(signal: AbortSignal) => Promise<T>;
 ```
 
 The task owns an `AbortController` and exposes the corresponding signal to the function. That means your async code can participate in cancellation naturally.
@@ -333,6 +396,32 @@ Cancellation is not treated as a mysterious side effect. It is a first-class sta
 
 This is academically important because cancellation is not merely “failure.” It is a different category of outcome. A cancelled request does not necessarily mean the system malfunctioned; it may mean the system behaved correctly by discarding obsolete work.
 
+### Linking a task to an external signal
+
+A task can also be told to abort itself whenever an external `AbortSignal` aborts. This is useful when a task is performed inside another abortable operation and should share its lifetime:
+
+```ts
+const childTask = createTask(loadDetails).perform();
+
+// When `signal` aborts, `childTask` aborts too.
+childTask.abortOnSignal(signal);
+```
+
+`abortOnSignal` returns the same task, so it composes naturally with `perform`:
+
+```ts
+const job = createJob(async (signal) => {
+  const details = await otherJob.perform().abortOnSignal(signal);
+  return render(details);
+});
+```
+
+Behavioural notes:
+
+- If the signal is **already aborted**, the task is aborted immediately and no listener is attached.
+- If the task is already **settled** (fulfilled, rejected, or aborted), the call is a no-op and returns the task unchanged.
+- Once the task settles by any path, the listener on the external signal is removed automatically, so there is no leak even when the signal outlives the task.
+
 ### Task events
 
 Tasks also support lifecycle events:
@@ -362,7 +451,7 @@ This event model is especially useful when jobs coordinate task histories.
 A `Job<T, Args>` wraps a repeatable async function:
 
 ```ts
-(signal: AbortSignal, ...args: Args) => Promise<T>
+(signal: AbortSignal, ...args: Args) => Promise<T>;
 ```
 
 Each call to `job.perform(...args)` creates a new `Task`.
@@ -382,7 +471,7 @@ const searchJob = createJob(
     });
     return response.json();
   },
-  { mode: JobMode.Restart }
+  { mode: JobMode.Restart },
 );
 ```
 
@@ -605,7 +694,7 @@ Those intents map naturally to job policies.
 
 ## Why data loading needs more than fetch
 
-Data loading in UI code is deceptively tricky. As mentioned in the Scope section, while you *can* build data loaders with Jobs, be aware that you are dealing with raw primitives. For global cache-managed data, tools like TanStack Query are better suited. However, for localized, imperative data fetching, Jobs are incredibly powerful.
+Data loading in UI code is deceptively tricky. As mentioned in the Scope section, while you _can_ build data loaders with Jobs, be aware that you are dealing with raw primitives. For global cache-managed data, tools like TanStack Query are better suited. However, for localized, imperative data fetching, Jobs are incredibly powerful.
 
 The surface problem seems simple:
 
@@ -636,7 +725,7 @@ const loadProductJob = createJob(
     const response = await fetch(`/api/products/${id}`, { signal });
     return response.json();
   },
-  { mode: JobMode.Restart }
+  { mode: JobMode.Restart },
 );
 ```
 
@@ -712,7 +801,7 @@ const saveProfileJob = createJob(
 
     return response.json();
   },
-  { mode: JobMode.Drop }
+  { mode: JobMode.Drop },
 );
 ```
 
@@ -874,7 +963,7 @@ const searchJob = createJob(
 
     return response.json();
   },
-  { mode: JobMode.Restart }
+  { mode: JobMode.Restart },
 );
 ```
 
@@ -910,7 +999,7 @@ const searchJob = createJob(
     if (!response.ok) throw new Error("Search failed");
     return response.json();
   },
-  { mode: JobMode.Restart }
+  { mode: JobMode.Restart },
 );
 ```
 
@@ -961,16 +1050,12 @@ const saveJob = createJob(
     if (!response.ok) throw new Error("Save failed");
     return response.json();
   },
-  { mode: JobMode.Drop }
+  { mode: JobMode.Drop },
 );
 ```
 
 ```tsx
-<button
-  type="button"
-  disabled={saveJob.isPending}
-  onClick={() => saveJob.perform(form())}
->
+<button type="button" disabled={saveJob.isPending} onClick={() => saveJob.perform(form())}>
   {saveJob.isPending ? "Saving..." : "Save"}
 </button>
 ```
@@ -992,7 +1077,7 @@ const loadReportJob = createJob(
     if (!response.ok) throw new Error("Load failed");
     return response.json();
   },
-  { mode: JobMode.Restart }
+  { mode: JobMode.Restart },
 );
 
 createEffect(() => {
@@ -1029,7 +1114,7 @@ const loadWithRetryJob = createJob(
 
     throw lastError;
   },
-  { mode: JobMode.Restart }
+  { mode: JobMode.Restart },
 );
 ```
 
@@ -1232,12 +1317,21 @@ const task = createTask<T>(async (signal) => {
 ```ts
 task.perform();
 task.abort(reason?);
+task.abortOnSignal(signal); // abort this task when `signal` aborts; returns the task
 task.then(...);
 task.catch(...);
 task.finally(...);
 task.addEventListener(type, listener, options?);
 task.removeEventListener(type, listener, options?);
 ```
+
+`abortOnSignal` links a task to an external `AbortSignal` and returns the task, so it composes with `perform`:
+
+```ts
+const child = otherJob.perform().abortOnSignal(signal);
+```
+
+When `signal` aborts, the task aborts too. If `signal` is already aborted the task aborts immediately; if the task is already settled the call is a no-op; and the listener is released automatically once the task settles, so a long-lived signal never leaks handlers. See [Linking a task to an external signal](#linking-a-task-to-an-external-signal).
 
 ### Task events
 
@@ -1256,7 +1350,7 @@ const job = createJob<T, Args>(
   },
   {
     mode: JobMode.Drop,
-  }
+  },
 );
 ```
 
@@ -1284,8 +1378,8 @@ job.abort(reason?);
 ## `JobMode`
 
 ```ts
-JobMode.Drop
-JobMode.Restart
+JobMode.Drop;
+JobMode.Restart;
 ```
 
 ### `Drop`
@@ -1303,11 +1397,11 @@ JobMode.Restart
 ## `TaskStatus`
 
 ```ts
-TaskStatus.Idle
-TaskStatus.Pending
-TaskStatus.Fulfilled
-TaskStatus.Rejected
-TaskStatus.Aborted
+TaskStatus.Idle;
+TaskStatus.Pending;
+TaskStatus.Fulfilled;
+TaskStatus.Rejected;
+TaskStatus.Aborted;
 ```
 
 ---

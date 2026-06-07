@@ -1,51 +1,63 @@
 {
   "name": "solid-tasks",
-  "description": "Manage and control concurrent and async operations in Solid.js apps. Forget about manual cancellation, concurrency side-effects and make your app user proof.",
   "version": "0.2.0",
-  "license": "MIT",
-  "homepage": "https://github.com/Exelord/solid-tasks",
-  "repository": "github:exelord/solid-tasks",
+  "description": "Manage and control concurrent and async operations in Solid.js apps. Forget about manual cancellation, concurrency side-effects and make your app user proof.",
   "keywords": [
-    "solidjs",
-    "tasks",
-    "jobs",
+    "actions",
     "concurrency",
+    "jobs",
     "promises",
-    "actions"
+    "solidjs",
+    "tasks"
   ],
+  "homepage": "https://github.com/Exelord/solid-tasks",
+  "license": "MIT",
   "author": {
     "name": "Maciej Kwaśniak",
     "email": "contact@exelord.com",
     "url": "https://exelord.com"
   },
+  "repository": "github:exelord/solid-tasks",
   "files": [
     "dist"
   ],
-  "main": "./dist/solid-tasks.cjs",
-  "module": "./dist/solid-tasks.js",
-  "types": "./dist/types/index.d.ts",
-  "source": "./dist/src/index.js",
-  "sideEffects": false,
   "type": "module",
+  "sideEffects": false,
   "exports": {
-    ".": {
-      "types": "./dist/types/index.d.ts",
-      "import": "./dist/solid-tasks.js",
-      "require": "./dist/solid-tasks.cjs"
-    }
+    ".": "./dist/index.mjs",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
-    "test": "vitest",
-    "coverage": "vitest run --coverage",
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "test": "vp test",
+    "check": "vp check",
+    "coverage": "vp test run --coverage",
     "prepublishOnly": "npm run build",
-    "dev": "npm-run-all --parallel 'build:** -- --watch'",
-    "build": "npm-run-all --parallel build:** && npm run types",
-    "build:js": "vite build",
-    "build:source": "tsc",
-    "types": "tsc --emitDeclarationOnly --declaration --outDir ./dist/types",
-    "release": "release-it",
-    "test-ct": "playwright test -c playwright-ct.config.ts"
+    "release": "release-it"
   },
+  "dependencies": {
+    "solid-proxies": "^2.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.2",
+    "@typescript/native-preview": "7.0.0-dev.20260509.2",
+    "release-it": "^20.2.0",
+    "solid-js": "^1.9.13",
+    "typescript": "^6.0.3",
+    "vite-plus": "latest"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.7.0"
+  },
+  "overrides": {
+    "vite": "npm:@voidzero-dev/vite-plus-core@latest",
+    "vitest": "npm:@voidzero-dev/vite-plus-test@latest"
+  },
+  "packageManager": "npm@11.16.0",
   "release-it": {
     "git": {
       "commitMessage": "v${version}",
@@ -63,25 +75,5 @@
         "vitest run"
       ]
     }
-  },
-  "peerDependencies": {
-    "solid-js": "^1.7.0"
-  },
-  "dependencies": {
-    "solid-proxies": "^1.0.2"
-  },
-  "devDependencies": {
-    "@playwright/experimental-ct-solid": "^1.39.0",
-    "@playwright/test": "^1.39.0",
-    "@types/node": "^20.8.10",
-    "@vitest/browser": "^0.34.6",
-    "@vitest/coverage-c8": "^0.33.0",
-    "@vitest/ui": "^0.34.6",
-    "npm-run-all": "^4.1.5",
-    "release-it": "^16.2.1",
-    "solid-js": "^1.7.0",
-    "typescript": "^5.2.2",
-    "vite": "^4.5.0",
-    "vitest": "^0.34.6"
   }
 }

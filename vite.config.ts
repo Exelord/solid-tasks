@@ -1,21 +1,17 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig } from "vite-plus";
 
 export default defineConfig({
-  build: {
-    target: "esnext",
-    minify: false,
-    lib: {
-      entry: "./src/index.ts",
-      formats: ["cjs", "es"],
+  pack: {
+    dts: {
+      tsgo: true,
     },
-    rollupOptions: {
-      external: ["solid-proxies", "solid-js"],
+    exports: true,
+  },
+  lint: {
+    options: {
+      typeAware: true,
+      typeCheck: true,
     },
   },
-  resolve: {
-    conditions: ["browser"],
-  },
-  test: {
-    dir: "./tests/vitest",
-  },
+  fmt: {},
 });

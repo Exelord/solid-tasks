@@ -1,28 +1,3 @@
-function abortablePromise<T>(signal: AbortSignal) {
-  let reject!: (reason?: any) => void;
-
-  const promise = new Promise<T>((_, reject_) => {
-    reject = reject_;
-  });
-
-  const callback = () => {
-    reject(signal.reason);
-  };
-
-  signal.addEventListener("abort", callback, {
-    once: true,
-    passive: true,
-  });
-
-  return {
-    promise,
-    abort(): void {
-      signal.removeEventListener("abort", callback);
-      reject();
-    },
-  };
-}
-
 /**
  * Run a promise with an abort signal.
  * @param signal An abort signal.
@@ -33,19 +8,26 @@ function abortablePromise<T>(signal: AbortSignal) {
  * ```ts
  * const controller = new AbortController();
  * const promise = new Promise((resolve) => setTimeout(resolve, 1000));
- * 
+ *
  * await work(controller.signal, promise);
  * ```
  */
 export async function work<T>(signal: AbortSignal, promise: Promise<T>) {
   signal.throwIfAborted();
 
-  const controlledPromise = abortablePromise<never>(signal);
+  const { promise: signalPromise, reject } = Promise.withResolvers<never>();
+
+  const callback = () => {
+    reject(signal.reason);
+  };
+
+  signal.addEventListener("abort", callback, { once: true });
 
   try {
-    return await Promise.race([controlledPromise.promise, promise]);
+    return await Promise.race([signalPromise, promise]);
   } finally {
-    controlledPromise.abort();
+    signal.removeEventListener("abort", callback);
+    reject();
   }
 }
 
@@ -58,10 +40,20 @@ export async function work<T>(signal: AbortSignal, promise: Promise<T>) {
  * @example
  * ```ts
  * const controller = new AbortController();
- * 
+ *
  * await timeout(controller.signal, 1000);
  * ```
  */
 export async function timeout(signal: AbortSignal, ms: number): Promise<void> {
-  return work(signal, new Promise((resolve) => setTimeout(resolve, ms)));
+  return work(
+    signal,
+    new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, ms);
+      // Clear the pending timer on abort so it does not keep the event loop
+      // alive for the remainder of `ms` after the work has already settled.
+      signal.addEventListener("abort", () => clearTimeout(timer), {
+        once: true,
+      });
+    }),
+  );
 }

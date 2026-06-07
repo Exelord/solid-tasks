@@ -7,10 +7,10 @@ A Task represents an asynchronous computation. It is a wrapper around a Promise 
 ### Construction
 
 ```ts
-import { createTask } from 'solid-tasks';
+import { createTask } from "solid-tasks";
 
 const task = createTask(async (signal) => {
-  const response = await fetch('...', { signal })
+  const response = await fetch("...", { signal });
   return response.json();
 });
 ```
@@ -32,6 +32,7 @@ const task = createTask(async (signal) => {
 
 - `perform()` - Starts execution of the Task.
 - `abort(cancelReason)` - Aborts the Task with an optional cancel reason.
+- `abortOnSignal(signal)` - Aborts the Task when the given `AbortSignal` aborts; returns the Task. The listener is released automatically once the Task settles.
 - `then(onFulfilled, onRejected)` - Registers callbacks to be called when the Task is fulfilled or rejected.
 - `catch(onRejected)` - Registers a callback to be called when the Task is rejected.
 - `finally(onFinally)` - Registers a callback to be called when the Task is settled.
