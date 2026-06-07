@@ -37,15 +37,16 @@ This library is especially useful in real user interfaces where the same action 
 
 ## Scope and abstraction level
 
-**It is crucial to understand that Solid Tasks is a low-level primitive, not a high-level framework.** 
+**It is crucial to understand that Solid Tasks is a low-level primitive, not a high-level framework.**
 
-This library is designed to deal strictly with the **state machine and UI flow of Promises** (loading flags, cancellation, fulfillment, rejection) and localized concurrency (dropping or restarting overlapping requests). 
+This library is designed to deal strictly with the **state machine and UI flow of Promises** (loading flags, cancellation, fulfillment, rejection) and localized concurrency (dropping or restarting overlapping requests).
 
-While it *can* be used directly in your application code, **it is not a replacement for high-level data fetching libraries like TanStack Query or Solid's native `createResource`.** 
+While it _can_ be used directly in your application code, **it is not a replacement for high-level data fetching libraries like TanStack Query or Solid's native `createResource`.**
 
 If you attempt to use Solid Tasks as your primary global data-fetching and caching layer, you will find that it is not optimized for that Developer Experience (DX) and will require significant boilerplate. It does not handle global cache invalidation, background refetching, or pagination out of the box.
 
 Instead, Solid Tasks is the kind of primitive you use to **build** more complex solutions. It shines when used as:
+
 - The underlying engine for advanced, bespoke event-handling pipelines.
 - A building block for custom data-loading wrappers.
 - A tool to manage complex, multi-step UI mutations (like chained save/upload operations) where you need fine-grained control over cancellation and race conditions.
@@ -227,7 +228,7 @@ import {
 A `Task<T>` wraps one async function of the form:
 
 ```ts
-(signal: AbortSignal) => Promise<T>
+(signal: AbortSignal) => Promise<T>;
 ```
 
 The task owns an `AbortController` and exposes the corresponding signal to the function. That means your async code can participate in cancellation naturally.
@@ -333,6 +334,32 @@ Cancellation is not treated as a mysterious side effect. It is a first-class sta
 
 This is academically important because cancellation is not merely “failure.” It is a different category of outcome. A cancelled request does not necessarily mean the system malfunctioned; it may mean the system behaved correctly by discarding obsolete work.
 
+### Linking a task to an external signal
+
+A task can also be told to abort itself whenever an external `AbortSignal` aborts. This is useful when a task is performed inside another abortable operation and should share its lifetime:
+
+```ts
+const childTask = createTask(loadDetails).perform();
+
+// When `signal` aborts, `childTask` aborts too.
+childTask.abortOnSignal(signal);
+```
+
+`abortOnSignal` returns the same task, so it composes naturally with `perform`:
+
+```ts
+const job = createJob(async (signal) => {
+  const details = await otherJob.perform().abortOnSignal(signal);
+  return render(details);
+});
+```
+
+Behavioural notes:
+
+- If the signal is **already aborted**, the task is aborted immediately and no listener is attached.
+- If the task is already **settled** (fulfilled, rejected, or aborted), the call is a no-op and returns the task unchanged.
+- Once the task settles by any path, the listener on the external signal is removed automatically, so there is no leak even when the signal outlives the task.
+
 ### Task events
 
 Tasks also support lifecycle events:
@@ -362,7 +389,7 @@ This event model is especially useful when jobs coordinate task histories.
 A `Job<T, Args>` wraps a repeatable async function:
 
 ```ts
-(signal: AbortSignal, ...args: Args) => Promise<T>
+(signal: AbortSignal, ...args: Args) => Promise<T>;
 ```
 
 Each call to `job.perform(...args)` creates a new `Task`.
@@ -382,7 +409,7 @@ const searchJob = createJob(
     });
     return response.json();
   },
-  { mode: JobMode.Restart }
+  { mode: JobMode.Restart },
 );
 ```
 
@@ -605,7 +632,7 @@ Those intents map naturally to job policies.
 
 ## Why data loading needs more than fetch
 
-Data loading in UI code is deceptively tricky. As mentioned in the Scope section, while you *can* build data loaders with Jobs, be aware that you are dealing with raw primitives. For global cache-managed data, tools like TanStack Query are better suited. However, for localized, imperative data fetching, Jobs are incredibly powerful.
+Data loading in UI code is deceptively tricky. As mentioned in the Scope section, while you _can_ build data loaders with Jobs, be aware that you are dealing with raw primitives. For global cache-managed data, tools like TanStack Query are better suited. However, for localized, imperative data fetching, Jobs are incredibly powerful.
 
 The surface problem seems simple:
 
@@ -636,7 +663,7 @@ const loadProductJob = createJob(
     const response = await fetch(`/api/products/${id}`, { signal });
     return response.json();
   },
-  { mode: JobMode.Restart }
+  { mode: JobMode.Restart },
 );
 ```
 
@@ -712,7 +739,7 @@ const saveProfileJob = createJob(
 
     return response.json();
   },
-  { mode: JobMode.Drop }
+  { mode: JobMode.Drop },
 );
 ```
 
@@ -874,7 +901,7 @@ const searchJob = createJob(
 
     return response.json();
   },
-  { mode: JobMode.Restart }
+  { mode: JobMode.Restart },
 );
 ```
 
@@ -910,7 +937,7 @@ const searchJob = createJob(
     if (!response.ok) throw new Error("Search failed");
     return response.json();
   },
-  { mode: JobMode.Restart }
+  { mode: JobMode.Restart },
 );
 ```
 
@@ -961,16 +988,12 @@ const saveJob = createJob(
     if (!response.ok) throw new Error("Save failed");
     return response.json();
   },
-  { mode: JobMode.Drop }
+  { mode: JobMode.Drop },
 );
 ```
 
 ```tsx
-<button
-  type="button"
-  disabled={saveJob.isPending}
-  onClick={() => saveJob.perform(form())}
->
+<button type="button" disabled={saveJob.isPending} onClick={() => saveJob.perform(form())}>
   {saveJob.isPending ? "Saving..." : "Save"}
 </button>
 ```
@@ -992,7 +1015,7 @@ const loadReportJob = createJob(
     if (!response.ok) throw new Error("Load failed");
     return response.json();
   },
-  { mode: JobMode.Restart }
+  { mode: JobMode.Restart },
 );
 
 createEffect(() => {
@@ -1029,7 +1052,7 @@ const loadWithRetryJob = createJob(
 
     throw lastError;
   },
-  { mode: JobMode.Restart }
+  { mode: JobMode.Restart },
 );
 ```
 
@@ -1256,7 +1279,7 @@ const job = createJob<T, Args>(
   },
   {
     mode: JobMode.Drop,
-  }
+  },
 );
 ```
 
@@ -1284,8 +1307,8 @@ job.abort(reason?);
 ## `JobMode`
 
 ```ts
-JobMode.Drop
-JobMode.Restart
+JobMode.Drop;
+JobMode.Restart;
 ```
 
 ### `Drop`
@@ -1303,11 +1326,11 @@ JobMode.Restart
 ## `TaskStatus`
 
 ```ts
-TaskStatus.Idle
-TaskStatus.Pending
-TaskStatus.Fulfilled
-TaskStatus.Rejected
-TaskStatus.Aborted
+TaskStatus.Idle;
+TaskStatus.Pending;
+TaskStatus.Fulfilled;
+TaskStatus.Rejected;
+TaskStatus.Aborted;
 ```
 
 ---

@@ -7,10 +7,10 @@ A Task represents an asynchronous computation. It is a wrapper around a Promise 
 ### Construction
 
 ```ts
-import { createTask } from 'solid-tasks';
+import { createTask } from "solid-tasks";
 
 const task = createTask(async (signal) => {
-  const response = await fetch('...', { signal })
+  const response = await fetch("...", { signal });
   return response.json();
 });
 ```

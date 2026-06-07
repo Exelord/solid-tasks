@@ -1,6 +1,6 @@
 # Job
 
-A job is a 
+A job is a
 
 ## API
 
