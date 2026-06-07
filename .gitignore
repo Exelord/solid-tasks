@@ -6,5 +6,3 @@ dist-ssr
 coverage
 /test-results/
 /blob-report/
-/playwright-report/
-/playwright/.cache/

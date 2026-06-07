@@ -1,3 +1,3 @@
-export * from "./job";
-export * from "./task";
-export * from "./work";
+export * from "./job.ts";
+export * from "./task.ts";
+export * from "./work.ts";
