@@ -12,6 +12,7 @@ This library is especially useful in real user interfaces where the same action 
 
 ## Table of contents
 
+- [Why you need this](#why-you-need-this)
 - [Scope and abstraction level](#scope-and-abstraction-level)
 - [Why this library exists](#why-this-library-exists)
 - [What problem it solves](#what-problem-it-solves)
@@ -32,6 +33,67 @@ This library is especially useful in real user interfaces where the same action 
 - [When to use Jobs](#when-to-use-jobs)
 - [Testing strategy](#testing-strategy)
 - [API reference](#api-reference)
+
+---
+
+## Why you need this
+
+Most async bugs in a UI trace back to one mistake: treating a user action as _"call this async function"_ when it is really **an operation with a concurrency policy**.
+
+Take a single **Save** button. The moment it touches the network, you implicitly owe answers to:
+
+- What if it's clicked twice before the first request finishes?
+- What if the user navigates away mid-request?
+- What if a newer action starts before the older one resolves?
+- What if a stale response arrives _after_ newer state already exists?
+
+These are not edge cases — they are the normal behavior of interactive software. Every meaningful click, keystroke, or navigation is one of these operations. With raw promises you answer the questions by hand, over and over, with scattered signals, booleans, abort controllers, and guards:
+
+```tsx
+// The hidden cost of "just an async handler"
+const [isSaving, setIsSaving] = createSignal(false);
+const [error, setError] = createSignal<Error | null>(null);
+
+const save = async () => {
+  setIsSaving(true);
+  setError(null);
+  try {
+    await fetch("/api/save", { method: "POST" }); // not cancellable
+  } catch (err) {
+    setError(err as Error); // a cancelled request looks like a failure
+  } finally {
+    setIsSaving(false); // nothing stops a second click from overlapping
+  }
+};
+```
+
+A **Job** turns that same action into one explicit, abortable, stateful object — and the concurrency policy becomes part of the definition, not an afterthought:
+
+```tsx
+const saveJob = createJob(
+  async (signal) => {
+    await fetch("/api/save", { method: "POST", signal }); // cancellable
+  },
+  { mode: JobMode.Drop }, // duplicate clicks are refused, structurally
+);
+
+// pending / error / success all derive from a single source of truth
+<button disabled={saveJob.isPending} onClick={() => saveJob.perform()}>
+  {saveJob.isPending ? "Saving…" : "Save"}
+</button>;
+```
+
+That is the entire pitch: **model every meaningful async user action or event as a `Task` or `Job`, and concurrency stops being accidental.** Loading flags, cancellation, race protection, and "remember the last good value" all come for free, in one place, every time.
+
+### Which one do I reach for?
+
+| You have…                                                                                                | Use                                        | Because                                                 |
+| -------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------- |
+| A repeatable action where the **first** call should win — Save, Pay, Delete, Submit, Upload              | `createJob(fn, { mode: JobMode.Drop })`    | duplicate triggers are refused while one is in flight   |
+| A repeatable action where the **latest** call should win — search, autocomplete, filter, route/tab loads | `createJob(fn, { mode: JobMode.Restart })` | the previous run is aborted so stale results can't land |
+| A **single** abortable run, or a building block inside other logic                                       | `createTask(fn)`                           | one execution with lifecycle + cancellation, no policy  |
+
+New here? Read [Core mental model](#core-mental-model) for the `Task` vs `Job` split, then [Why UI events should be Jobs](#why-ui-events-should-be-jobs) for the full argument.
 
 ---
 
@@ -1255,12 +1317,21 @@ const task = createTask<T>(async (signal) => {
 ```ts
 task.perform();
 task.abort(reason?);
+task.abortOnSignal(signal); // abort this task when `signal` aborts; returns the task
 task.then(...);
 task.catch(...);
 task.finally(...);
 task.addEventListener(type, listener, options?);
 task.removeEventListener(type, listener, options?);
 ```
+
+`abortOnSignal` links a task to an external `AbortSignal` and returns the task, so it composes with `perform`:
+
+```ts
+const child = otherJob.perform().abortOnSignal(signal);
+```
+
+When `signal` aborts, the task aborts too. If `signal` is already aborted the task aborts immediately; if the task is already settled the call is a no-op; and the listener is released automatically once the task settles, so a long-lived signal never leaks handlers. See [Linking a task to an external signal](#linking-a-task-to-an-external-signal).
 
 ### Task events
 
